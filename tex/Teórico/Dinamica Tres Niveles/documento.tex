@@ -164,23 +164,19 @@ Reemplazando en el \textit{ansatz}:
 
 \section{Tercer Orden Perturbativo}
 
-La derivación de la coherencia de tercer orden $\rho_{cb}^{(3)}$ se obtiene al utilizar la coherencia de segundo orden $\rho_{ca}^{(2)}$ calculada previamente como el término fuente que impulsa esta nueva perturbación. Este paso describe físicamente una transición descendente estimulada desde el nivel superior $c$ hacia el estado intermedio $b$.
+Para la derivación de la coherencia de tercer orden $\rho_{cb}^{(3)}$, se parte de la ecuación de evolución para el elemento de la matriz de densidad correspondiente a la transición $c \to b$:
 
-Se parte de la ecuación de evolución para el elemento de la matriz de densidad correspondiente a la transición $c \to b$:
 \begin{equation}
 \dot{\rho}_{cb}^{(3)} = -(i\omega_{cb} + \Gamma_{cb})\rho_{cb}^{(3)} + \frac{i}{\hbar} \sum_i (\mu_{ci}\rho_{ib}^{(2)} - \mu_{ib}\rho_{ci}^{(2)})E(t)
 \end{equation}
+La única población no nula en el segundo orden de perturbación que conecta estos estados es la coherencia $\rho_{ca}^{(2)}$. Por lo tanto, en la sumatoria el único índice que sobrevive es $i=a$.
 
-Para evaluar el conmutador de la interacción, se debe analizar qué elementos de segundo orden no son nulos. El único camino cuántico poblado en el segundo orden de perturbación que conecta estos estados es la coherencia $\rho_{ca}^{(2)}$. Por lo tanto, en la sumatoria el único índice que sobrevive es $i=a$.
-
-Dado que la transición directa de dos fotones entre los estados $c$ y $a$ está prohibida por las reglas de selección dipolares ($\mu_{ca} = 0$), el primer término del paréntesis se anula. El término restante es $-\mu_{ab}\rho_{ca}^{(2)}$. Expresando el momento dipolar conjugado como $\mu_{ab} = \mu_{ba}^*$, la ecuación diferencial se simplifica a la interacción directa con el campo externo:
+La transición directa de dos fotones entre los estados $c$ y $a$ está prohibida por las reglas de selección dipolares, por lo que $\mu_{ca} = 0$. De forma que la coherencia queda expresada como:
 \begin{equation}
 \dot{\rho}_{cb}^{(3)} = -(i\omega_{cb} + \Gamma_{cb})\rho_{cb}^{(3)} - \frac{i}{\hbar} \mu_{ba}^* \rho_{ca}^{(2)} E(t)
 \end{equation}
 
-
-
-Al representar una transición descendente (emisión estimulada acoplada a la polarización), el sistema extrae energía del campo macroscópico oscilando en la dirección opuesta a la absorción. Matemáticamente, bajo la Aproximación de la Onda Rotante, esto significa que la coherencia interactúa con las componentes de frecuencia negativa (complejas conjugadas) del campo electromagnético total:
+Al representar una transición descendente, el sistema extrae energía del campo macroscópico oscilando en la dirección opuesta a la absorción. Matemáticamente, bajo la Aproximación de la Onda Rotante, esto significa que la coherencia interactúa con las componentes de frecuencia negativa (complejas conjugadas) del campo electromagnético total:
 \begin{equation}
 E^*(t) = \tilde{E}_1^* e^{i\omega_1 t} + \tilde{E}_2^* e^{i\omega_2 t} + \tilde{E}_3^* e^{i\omega_3 t}
 \end{equation}
@@ -190,9 +186,9 @@ La coherencia de segundo orden $\rho_{ca}^{(2)}$ posee un coeficiente global $\f
 -\frac{i}{\hbar} \mu_{ba}^* \left( \frac{\mu_{cb}\mu_{ba}}{\hbar^2} \right) = -\frac{i}{\hbar^3} |\mu_{ba}|^2 \mu_{cb}
 \end{equation}
 
-El núcleo de la derivación radica en realizar el producto cruzado entre los $3$ términos contenidos en los corchetes de $\rho_{ca}^{(2)}$ y las $3$ componentes del campo conjugado $E^*(t)$. Este producto genera $3 \times 3 = 9$ términos impulsores individuales, lo que explica la estructura expandida de la ecuación (4a).
+El cálculo explícito está en realizar el producto cruzado entre los $3$ términos contenidos en los corchetes de $\rho_{ca}^{(2)}$ y las $3$ componentes del campo conjugado $E^*(t)$. Este producto genera $3 \times 3 = 9$ términos impulsores individuales, lo que explica la estructura expandida de la ecuación (4a).
 
-A modo de demostración algebraica, se evalúa el primer término de $\rho_{ca}^{(2)}$, el cual es proporcional a $\tilde{E}_1^2 e^{-i2\omega_1 t}$, al interactuar con el primer componente del campo $\tilde{E}_1^* e^{i\omega_1 t}$:
+El primer térimino de $\rho_{ca}^{(2)}$, el cual es proporcional a $\tilde{E}_1^2 e^{-i2\omega_1 t}$, al interactuar con el primer componente del campo $\tilde{E}_1^* e^{i\omega_1 t}$:
 \begin{equation}
 \left( \frac{\tilde{E}_1^2 e^{-i2\omega_1 t}}{(\Delta_1 - i\Gamma_{ba})(\Delta_2 - i\Gamma_{ca})} \right) \tilde{E}_1^* e^{i\omega_1 t} = \frac{|\tilde{E}_1|^2 \tilde{E}_1 e^{-i\omega_1 t}}{(\Delta_1 - i\Gamma_{ba})(\Delta_2 - i\Gamma_{ca})}
 \end{equation}
@@ -218,7 +214,6 @@ Insertando las definiciones $\Delta_2 = \omega_{ca} - 2\omega_1$ y $\Delta_1 = \
 \omega_{cb} - \omega_1 = \Delta_2 - \Delta_1
 \end{equation}
 Lo que genera el nuevo denominador $(\Delta_2 - \Delta_1 - i\Gamma_{cb})$ en el primer término de la ecuación.
-
 
 
 Al multiplicar este mismo primer término de $\rho_{ca}^{(2)}$ por la segunda componente del campo conjugado, $\tilde{E}_2^* e^{i\omega_2 t}$, la frecuencia de oscilación resultante es $2\omega_1 - \omega_2$. Por conservación de energía en el mezclado de cuatro ondas ($2\omega_1 = \omega_2 + \omega_3$), esta frecuencia se reduce exactamente a $\omega_3$, generando el término numerador $\tilde{E}_1^2 \tilde{E}_2^* e^{-i\omega_3 t}$.
