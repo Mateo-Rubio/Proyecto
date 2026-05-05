@@ -45,7 +45,4 @@ omega_laser1 = 2 * np.pi * c / 822.48e-9
 # One-photon detuning (Delta_1)
 Delta1 = omega_ba - omega_laser1
 factor_Delta1 = Delta1 / Gamma_ba
-
-# Two-photon detuning (Delta_2)
-# Assuming the 822nm laser is exactly on the two-photon resonance for 6S_1/2 -> 8S_1/2
-Delta2 = 0.0
+print(factor_Delta1)
