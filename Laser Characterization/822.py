@@ -14,7 +14,7 @@ dataFrames_datos = {}
 N = 20 # Número de datos tomados ajustados en el logsetup
 
 # --- CORTAR PUNTOS AL FINAL ---
-CORTAR_AL_FINAL = 8 # Cambia este número para borrar los últimos N puntos de la medición
+CORTAR_AL_FINAL = 13 # Cambia este número para borrar los últimos N puntos de la medición
 # ------------------------------
 
 posiciones = []
@@ -22,7 +22,7 @@ posiciones = []
 # Construct the absolute path dynamically
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # 1. Update the folder and file search pattern to 822nm
-search_path = os.path.join(script_dir, "data", "822nm", "z*mm-822nm.xlsx")
+search_path = os.path.join(script_dir, "data2","822nm", "z*mm-822nm.xlsx")
 
 archivos = glob.glob(search_path)
 
