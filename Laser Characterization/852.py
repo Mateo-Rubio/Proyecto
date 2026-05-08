@@ -14,7 +14,7 @@ dataFrames_datos = {}
 N = 20 # Número de datos tomados ajustados en el logsetup
 
 # --- NEW VARIABLE HERE ---
-CORTAR_AL_FINAL = 8 # Cambia este número para borrar los últimos N puntos de la medición
+CORTAR_AL_FINAL = 0 # Cambia este número para borrar los últimos N puntos de la medición
 # -------------------------
 
 posiciones = []
@@ -22,25 +22,26 @@ posiciones = []
 # Construct the absolute path dynamically
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # Update the folder and file search pattern to 852nm
-search_path = os.path.join(script_dir, "data", "852nm", "z*mm-852nm.xlsx")
+search_path = os.path.join(script_dir, "data3", "852nm", "z*mm.xlsx")
 
 archivos = glob.glob(search_path)
-
+j = 0
 for archivo in archivos:
     nombre_archivo = os.path.basename(archivo)
     
     # Update regex to look for "852nm"
-    match = re.search(r"z(\d+(\.\d+)?)mm-852nm\.xlsx", nombre_archivo)
+    match = re.search(r"z(\d+(\.\d+)?)mm\.xlsx", nombre_archivo)
     if match:
         posicion = float(match.group(1))
         posiciones.append(posicion)
 
         # Read the file, skipping the 21 rows of BeamMaster metadata
         df = pd.read_excel(archivo, skiprows=21)
-        
         # Drop the first row (index 0) which contains the text units like '(micron)'
         df = df.drop(0).reset_index(drop=True)
-        
+        if j == 0:
+            print(df)
+            j+=1
         # Clean the comma decimals so Python can do math on them
         cols_to_convert = ["W Width I", "V Width I"]
         for col in cols_to_convert:

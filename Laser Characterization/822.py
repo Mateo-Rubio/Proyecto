@@ -14,7 +14,7 @@ dataFrames_datos = {}
 N = 20 # Número de datos tomados ajustados en el logsetup
 
 # --- CORTAR PUNTOS AL FINAL ---
-CORTAR_AL_FINAL = 13 # Cambia este número para borrar los últimos N puntos de la medición
+CORTAR_AL_FINAL = 5 # Cambia este número para borrar los últimos N puntos de la medición
 # ------------------------------
 
 posiciones = []
@@ -22,7 +22,7 @@ posiciones = []
 # Construct the absolute path dynamically
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # 1. Update the folder and file search pattern to 822nm
-search_path = os.path.join(script_dir, "data2","822nm", "z*mm-822nm.xlsx")
+search_path = os.path.join(script_dir, "data3","822nm", "z*mm.xlsx")
 
 archivos = glob.glob(search_path)
 
@@ -30,7 +30,7 @@ for archivo in archivos:
     nombre_archivo = os.path.basename(archivo)
     
     # 2. Update regex to look for "822nm"
-    match = re.search(r"z(\d+(\.\d+)?)mm-822nm\.xlsx", nombre_archivo)
+    match = re.search(r"z(\d+(\.\d+)?)mm\.xlsx", nombre_archivo)
     if match:
         posicion = float(match.group(1))
         posiciones.append(posicion)
@@ -78,7 +78,8 @@ for i, posicion in enumerate(lista_posiciones):
 
 # Convert variables to SI units / processing units
 z = np.array(lista_posiciones) * 1e-3
-
+print(W_width_I)
+print(V_width_I)
 # Gaussian Beam Formula
 def w(z, w_0, z_0, z_R):
     return w_0 * np.sqrt(1 + ((z - z_0) / z_R)**2)
