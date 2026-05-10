@@ -2,15 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 
-# 1. Importar la clase física orientada a objetos (con propagación polar SVEA)
+# 1. Importar la clase física orientada a objetos (con propagación polar autónoma)
 from physics_constants import CesiumFWMSystem
 
 # Instanciar el sistema físico global inicializado con datos de laboratorio
 fwm_sys = CesiumFWMSystem()
 
 # 2. Rutina microscópica acoplada de forma nativa a las variables polares A_j y theta
-def calc_density_matrix(D2_factor, d3_array, t, z, delta_k):
+def calc_density_matrix(D2_factor, d3_array, t, z):
     # Delegar el candado físico: asignar Delta2 arrastra automáticamente a Delta1 en la clase
+    # y recalcula de forma absoluta las frecuencias om_j, los vectores k_j y el Delta k cinemático
     fwm_sys.Delta2 = D2_factor * fwm_sys.Gamma_ba
     fwm_sys.Delta3 = fwm_sys.Delta1  # Anclar la desintonía central al valor actual
     
@@ -18,7 +19,7 @@ def calc_density_matrix(D2_factor, d3_array, t, z, delta_k):
     # EVOLUCIÓN MACROSCÓPICA POLAR PURA (Teoría de Boyd et al.)
     # Extraemos las amplitudes reales A_j y la fase colectiva autónoma theta
     # =========================================================================
-    A1, A2, A3, theta = fwm_sys.compute_polar_state(z, delta_k)
+    A1, A2, A3, theta = fwm_sys.compute_polar_state(z)
     
     # Mapeo espectral a lo largo del eje X de la gráfica
     D1 = fwm_sys.Delta1
@@ -43,8 +44,7 @@ def calc_density_matrix(D2_factor, d3_array, t, z, delta_k):
     mu_cb = fwm_sys.mu_cb
     h_bar = fwm_sys.h_bar
     
-    # Reconstrucción de los campos asumiendo la fase relativa en la onda generada (E2)
-    # Esto permite evaluar las coherencias de orden inferior de forma estándar
+    # Reconstrucción de los campos usando los vectores dinámicos k_j y om_j de la clase
     E_z = np.array([A1, A2 * np.exp(1j * theta), A3]) * np.exp(1j * fwm_sys.k * z)
     e_t = np.exp(-1j * fwm_sys.om * t)
     
@@ -115,7 +115,6 @@ init_D2_factor  = 0.0
 init_view_width = 20.0          
 init_t  = 0.0
 init_z  = 0.0
-init_dk = 0.0  
 
 view_state = {'center': 0.0}
 
@@ -123,7 +122,7 @@ def get_x_array(center, width):
     return np.linspace(center - width/2, center + width/2, 2000)
 
 current_x = get_x_array(view_state['center'], init_view_width)
-r1, r2, r3, rba3, r4 = calc_density_matrix(init_D2_factor, current_x, init_t, init_z, init_dk)
+r1, r2, r3, rba3, r4 = calc_density_matrix(init_D2_factor, current_x, init_t, init_z)
 
 # Trazado inicial de las curvas atómicas
 line_r1_real, = axs[0,0].plot(current_x, np.real(r1), 'b', label="Real")
@@ -152,13 +151,12 @@ for ax in axs.flat:
         ax.set_xlabel(r'$\Delta_3 / \Gamma_{ba}$')
 
 # =========================================================
-# 5. Controles y Botones de Interfaz
+# 5. Controles y Botones de Interfaz (Espacio optimizado)
 # =========================================================
-ax_d2     = plt.axes([0.10, 0.32, 0.35, 0.02])
-ax_width  = plt.axes([0.55, 0.32, 0.35, 0.02])
-ax_t      = plt.axes([0.10, 0.25, 0.35, 0.02])
-ax_z      = plt.axes([0.55, 0.25, 0.35, 0.02])
-ax_dk     = plt.axes([0.10, 0.18, 0.35, 0.02])  
+ax_d2     = plt.axes([0.10, 0.30, 0.35, 0.02])
+ax_width  = plt.axes([0.55, 0.30, 0.35, 0.02])
+ax_t      = plt.axes([0.10, 0.20, 0.35, 0.02])
+ax_z      = plt.axes([0.55, 0.20, 0.35, 0.02])
 
 ax_btn_0  = plt.axes([0.35, 0.08, 0.12, 0.05])
 ax_btn_2d = plt.axes([0.55, 0.08, 0.12, 0.05])
@@ -167,7 +165,6 @@ slider_d2    = Slider(ax_d2, r'822nm Tuning $\Delta_2$', -20.0, 20.0, valinit=in
 slider_width = Slider(ax_width, 'View Width', 1.0, 1000.0, valinit=init_view_width)
 slider_t     = Slider(ax_t, r'Time $t$ (s)', 0.0, 4e-15, valinit=init_t, valfmt='%e')
 slider_z     = Slider(ax_z, r'Position $z$ (m)', 0.0, 0.1, valinit=init_z, valfmt='%.4f')
-slider_dk    = Slider(ax_dk, r'Phase Mismatch $\Delta k$', 0.0, 50.0, valinit=init_dk)
 
 btn_zero = Button(ax_btn_0, 'Teleport to 0')
 btn_2d1  = Button(ax_btn_2d, r'Teleport to $2\Delta_1$')
@@ -192,12 +189,11 @@ def update(val):
     width  = slider_width.val
     t_val  = slider_t.val
     z_val  = slider_z.val
-    dk_val = slider_dk.val
     
     new_x = get_x_array(view_state['center'], width)
     
-    # Delegación absoluta: la clase orquesta internamente el arrastre Delta2 -> Delta1
-    r1, r2, r3, rba3, r4 = calc_density_matrix(d2, new_x, t_val, z_val, dk_val)
+    # Delegación absoluta: la clase orquesta internamente el arrastre Delta2 -> Delta1 y los vectores k
+    r1, r2, r3, rba3, r4 = calc_density_matrix(d2, new_x, t_val, z_val)
     
     line_r1_real.set_data(new_x, np.real(r1)); line_r1_imag.set_data(new_x, np.imag(r1))
     line_r2_real.set_data(new_x, np.real(r2)); line_r2_imag.set_data(new_x, np.imag(r2))
@@ -217,6 +213,5 @@ slider_d2.on_changed(update)
 slider_width.on_changed(update)
 slider_t.on_changed(update)
 slider_z.on_changed(update)
-slider_dk.on_changed(update)
 
 plt.show()
