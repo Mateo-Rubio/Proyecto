@@ -123,13 +123,24 @@ class CesiumFWMSystem:
         return np.array([a1, a2, a3])
 
     # =========================================================================
-    # EVOLUCIÓN CON PERFIL GAUSSIANO EN Z
+    # SISTEMA DIFERENCIAL ESCALADO Y REGULARIZADO
     # =========================================================================
-    def coupled_polar_svea(self, z, y):
-        A1, A2, A3, theta = y
+    def coupled_polar_svea(self, z, y_scaled):
+        """
+        Derivadas espaciales resolviendo variables adimensionales suaves.
+        y_scaled = [A1 / E_scale, A2 / E_scale, A3 / E_scale, theta]
+        """
+        # Desnormalizar temporalmente para la física interna
+        E_scale = 1e5
+        A1 = y_scaled[0] * E_scale
+        A2 = y_scaled[1] * E_scale
+        A3 = y_scaled[2] * E_scale
+        theta = y_scaled[3]
         
         a1, a2, a3 = self.alpha_coeffs
         b = self.beta
+        
+        # Evitar divisiones por cero en los detunings
         d1 = self._Delta1 if abs(self._Delta1) > 1.0 else 1.0
         d3 = self._Delta3 if abs(self._Delta3) > 1.0 else 1.0
         ratio_31 = d3 / d1
@@ -138,47 +149,54 @@ class CesiumFWMSystem:
         cos_b = np.cos(b)
         sin_b = np.sin(b)
         
-        # Perfil Gaussiano enfocado en el centro de la celda (z_foco = 35.9 mm)
-        gauss_profile_1 = 1.0 / (1.0 + ((z - self.z_foco) / self.zR_1)**2)
-        gauss_profile_3 = 1.0 / (1.0 + ((z - self.z_foco) / self.zR_3)**2)
+        # 1. TÉRMINO DE DIFRACCIÓN GEOMÉTRICA REGULARIZADA
+        # Añadimos un pequeño epsilon al denominador para evitar polos rígidos numéricos
+        eps_geom = 1e-10
+        diff_geom_1 = - (z - self.z_foco) / (self.zR_1**2 + (z - self.z_foco)**2 + eps_geom)
+        diff_geom_3 = - (z - self.z_foco) / (self.zR_3**2 + (z - self.z_foco)**2 + eps_geom)
+        diff_geom_2 = diff_geom_1  # Sigue la divergencia focal del bombeo
         
-        # =====================================================================
-        # REGULARIZACIÓN FÍSICA: Límite de conservación de energía
-        # Ninguna amplitud puede superar la suma total de los campos incidentes
-        # =====================================================================
-        max_E = self.A1_0 * 2.0
-        A1_safe = np.clip(A1, -max_E, max_E)
-        A2_safe = np.clip(A2, -max_E, max_E)
-        A3_safe = np.clip(A3, -max_E, max_E)
+        # Límite físico estricto: la energía no puede superar un máximo razonable
+        max_field = self.A1_0 * 300.0
+        A1_s = np.clip(A1, -max_field, max_field)
+        A2_s = np.clip(A2, -max_field, max_field)
+        A3_s = np.clip(A3, -max_field, max_field)
         
-        # Ecuaciones acopladas usando las amplitudes seguras
-        dA1_dz = -a1 * A1_safe * (A2_safe * A3_safe * np.cos(theta + b) + ratio_31 * (A1_safe**2) * cos_b) * gauss_profile_1
-        dA2_dz = -a2 * A3_safe * ((A1_safe**2) * np.cos(theta - b) + ratio_13 * A2_safe * A3_safe * cos_b) * gauss_profile_1
-        dA3_dz = -a3 * A2_safe * ((A1_safe**2) * np.cos(theta - b) + ratio_13 * A2_safe * A3_safe * cos_b) * gauss_profile_3
+        # 2. DERIVADAS FÍSICAS DE AMPLITUD (V/m por metro)
+        dA1_dz = diff_geom_1 * A1_s - a1 * A1_s * (A2_s * A3_s * np.cos(theta + b) + ratio_31 * (A1_s**2) * cos_b)
+        dA2_dz = diff_geom_2 * A2_s - a2 * A3_s * ((A1_s**2) * np.cos(theta - b) + ratio_13 * A2_s * A3_s * cos_b)
+        dA3_dz = diff_geom_3 * A3_s - a3 * A2_s * ((A1_s**2) * np.cos(theta - b) + ratio_13 * A2_s * A3_s * cos_b)
         
-        denom_A2 = A2_safe if abs(A2_safe) > 1e-12 else 1e-12
-        denom_A3 = A3_safe if abs(A3_safe) > 1e-12 else 1e-12
+        # 3. DERIVADA DE FASE (Radianes por metro) con protección de piso de ruido
+        soft_start = E_scale * 1e-4
+        denom_A2 = np.sqrt(A2_s**2 + soft_start**2)
+        denom_A3 = np.sqrt(A3_s**2 + soft_start**2)
         
-        term1 = 2.0 * a1 * A2_safe * A3_safe * np.sin(theta + b)
-        term2 = (a2 * (A1_safe**2) * A3_safe / denom_A2 + a3 * (A1_safe**2) * A2_safe / denom_A3) * np.sin(theta - b)
-        term3 = (2.0 * a1 * ratio_31 * (A1_safe**2) - a2 * ratio_13 * (A3_safe**2) - a3 * ratio_13 * (A2_safe**2)) * sin_b
+        term1 = 2.0 * a1 * A2_s * A3_s * np.sin(theta + b)
+        term2 = (a2 * (A1_s**2) * A3_s / denom_A2 + a3 * (A1_s**2) * A2_s / denom_A3) * np.sin(theta - b)
+        term3 = (2.0 * a1 * ratio_31 * (A1_s**2) - a2 * ratio_13 * (A3_s**2) - a3 * ratio_13 * (A2_s**2)) * sin_b
         
-        dtheta_dz = (term1 + term2 + term3) * gauss_profile_1 - self.delta_k_total
+        dtheta_dz = term1 + term2 + term3 - self.delta_k_total
         
-        return [dA1_dz, dA2_dz, dA3_dz, dtheta_dz]
+        # Devolver el vector de derivadas estrictamente escalado para el Jacobiano de SciPy
+        return [dA1_dz / E_scale, dA2_dz / E_scale, dA3_dz / E_scale, dtheta_dz]
 
     def compute_polar_state(self, z_target):
         if z_target <= 0.0:
             return self.A1_0, 1e-12, self.A3_0, 0.0
             
-        # Añadimos max_step=1e-4 (100 micrómetros) para forzar estabilidad en el solver numérico
-        sol = solve_ivp(self.coupled_polar_svea, (0.0, z_target), self.y0_polar, 
-                        t_eval=[z_target], rtol=1e-6, atol=1e-9, max_step=1e-4)
+        E_scale = 1e5
+        # Preparamos el vector inicial escalado para que todo ronde valores de ~1.0
+        y0_scaled = [self.A1_0 / E_scale, 1e-12 / E_scale, self.A3_0 / E_scale, 0.0]
+        
+        # El integrador BDF ahora converge de forma instantánea al no sufrir gradientes flotantes masivos
+        sol = solve_ivp(self.coupled_polar_svea, (0.0, z_target), y0_scaled, 
+                        method='BDF', t_eval=[z_target], rtol=1e-5, atol=1e-8)
                         
-        # Si el solver fallara por algún transitorio extremo, devolvemos el último valor estable
-        A1_z = sol.y[0, -1]
-        A2_z = sol.y[1, -1]
-        A3_z = sol.y[2, -1]
+        # Restauramos las unidades físicas reales multiplicando por la escala
+        A1_z = sol.y[0, -1] * E_scale
+        A2_z = sol.y[1, -1] * E_scale
+        A3_z = sol.y[2, -1] * E_scale
         theta_z = sol.y[3, -1]
         
         theta_z = (theta_z + np.pi) % (2.0 * np.pi) - np.pi
