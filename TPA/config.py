@@ -10,4 +10,4 @@ COLUMNS = {
     "voltage": 4
 }
 
-FILE_PATTERN = "DopplerBroadened*C-822nm-3.5V-20mHz-500ms.txt"
+FILE_PATTERN = "DopplerBroadened*C-822nm-3.5V-10mHz-500ms.txt"

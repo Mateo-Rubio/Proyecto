@@ -4,20 +4,23 @@ import numpy as np
 from data_loader import load_spectra_data
 from analysis import fit_all_spectra, gaussian_tpa_freq, calcular_densidad_cesio_steck
 
+# Usamos la misma velocidad de la luz definida en analysis.py para consistencia
+C_LIGHT = 299792458.0 
+
 def main():
-    # 1. Cargar datos
-    dataset = load_spectra_data(data_dir="data")
+    # 1. Cargar datos (ahora desde /data2 por defecto)
+    dataset = load_spectra_data()
     if not dataset:
         return
 
-    # 2. Correr el módulo de ajuste (internamente mapea a THz y calcula Área)
+    # 2. Correr el módulo de ajuste
     fit_results = fit_all_spectra(dataset)
     if not fit_results:
         print("No se generaron resultados de ajuste.")
         return
 
     # ==========================================
-    # GRÁFICA 1: Espectros en Frecuencia
+    # GRÁFICA 1: Espectros en Frecuencia (Escala Automática)
     # ==========================================
     plt.figure(figsize=(10, 5))
     
@@ -37,6 +40,9 @@ def main():
     plt.title("Ajuste Gaussiano Doppler-Broadened TPA")
     plt.xlabel(r"Frecuencia del Láser $\nu$ (THz)")
     plt.ylabel("Conteos PMT (Promedio)")
+    
+    # (Se eliminaron las restricciones manuales de plt.xlim para ver el barrido completo)
+
     plt.legend()
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
@@ -70,32 +76,26 @@ def main():
     experiment_areas = [fit_results[t]["Area"] for t in measured_temps]
     teorica_puntos = [calcular_densidad_cesio_steck(t) for t in measured_temps]
 
-    # Factor de escala anclado al primer punto (el más frío)
     factor_escala = teorica_puntos[0] / experiment_areas[0]
     areas_escaladas = [area * factor_escala for area in experiment_areas]
 
-    # Curva teórica continua para el fondo
     T_smooth = np.linspace(min(measured_temps) - 5, max(measured_temps) + 5, 100)
     densidad_smooth = [calcular_densidad_cesio_steck(t) for t in T_smooth]
 
     plt.figure(figsize=(9, 6))
-    
-    # Línea teórica de Steck
     plt.plot(T_smooth, densidad_smooth, 'k--', linewidth=2, label="Densidad Teórica (Steck)")
-    
-    # Puntos experimentales (Áreas escaladas)
     plt.plot(measured_temps, areas_escaladas, 'ro', markersize=9, 
              markeredgecolor='black', label="Densidad Exp. (Basada en Área TPA)")
 
     plt.title("Densidad Atómica del Cesio: Teoría vs Espectroscopía TPA")
     plt.xlabel("Temperatura Medida (°C)")
     plt.ylabel(r"Densidad Atómica ($\text{átomos} / \text{cm}^3$)")
-    plt.yscale('log') # Eje Y logarítmico
+    plt.yscale('log') 
     plt.legend()
     plt.grid(True, which="both", linestyle="--", alpha=0.6)
     plt.tight_layout()
 
-    # Mostrar las 3 gráficas simultáneamente
+    # Mostrar las 3 gráficas
     plt.show()
 
     # Resumen en consola
