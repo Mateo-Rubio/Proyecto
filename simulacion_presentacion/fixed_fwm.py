@@ -1,0 +1,171 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ==============================================================================
+# 1. CONSTANTES FÍSICAS (Fallback robusto por si falta physics_constants.py)
+# ==============================================================================
+try:
+    from physics_constants import *
+except ImportError:
+    # Valores representativos típicos en SI para Cesio si no se encuentra el archivo
+    h_bar = 1.0545718e-34
+    Gamma_ba = 2 * np.pi * 5.2e6
+    Gamma_cb = 2 * np.pi * 3.0e6
+    Gamma_ca = 2 * np.pi * 1.0e6
+    gamma_c  = 2 * np.pi * 2.0e6
+    mu_ba = 3.0e-29
+    mu_cb = 1.5e-29
+    # Campos base y vectores de onda de prueba
+    E0 = np.array([5e5, 1e4, 1e4], dtype=np.complex128)
+    om = np.array([2.29e15, 2.21e15, 2.37e15]) # Frecuencias ópticas
+    k  = om / 3e8
+    factor_Delta1 = 15.0
+
+# ==============================================================================
+# 2. FUNCIONES MATEMÁTICAS DEL MODELO DE MATRIZ DE DENSIDAD
+# ==============================================================================
+def calc_density_matrix(D1_factor, D2_factor, d3_array, t, z):
+    # Convertir factores adimensionales a frecuencias angulares reales
+    D1 = D1_factor * Gamma_ba
+    D2 = D2_factor * Gamma_ba
+    D3 = d3_array * Gamma_ba
+    
+    # Calcular propagación espaciotemporal de los campos complejos
+    E_z = E0 * np.exp(1j * k * z)
+    e_t = np.exp(-1j * om * t)
+    
+    # Denominadores comunes resonantes
+    D_A = (D1 - 1j * Gamma_ba)
+    D_B = (2 * D1 - D3 - 1j * Gamma_ba)
+    D_C = (D3 - 1j * Gamma_ba)
+    D_D = (D2 - D1 - 1j * Gamma_cb)
+    D_E = (D2 + D3 - 2 * D1 - 1j * Gamma_cb)
+    D_F = (D2 - D3 - 1j * Gamma_cb)
+    D_G = (2 * D1 - D3 - 1j * Gamma_cb)
+    D_pre_2 = (D2 - 1j * Gamma_ca)
+    
+    # Tercer Orden (rho_cb) - Polarización No Lineal Principal
+    prefix_3 = -(np.abs(mu_ba)**2 * mu_cb) / (D_pre_2 * h_bar**3)
+    t1_3 = (np.abs(E_z[0])**2 * E_z[0] * e_t[0]) / (D_A * D_D)
+    t2_3 = (E_z[0]**2 * np.conj(E_z[1]) * e_t[2]) / (D_A * D_E)
+    t3_3 = (E_z[0]**2 * np.conj(E_z[2]) * e_t[1]) / (D_A * D_F)
+    t4_3 = (E_z[1] * E_z[2] * np.conj(E_z[0]) * e_t[0]) / (D_B * D_D)
+    t5_3 = (np.abs(E_z[1])**2 * E_z[2] * e_t[2]) / (D_B * D_E)
+    t6_3 = (np.abs(E_z[2])**2 * E_z[1] * e_t[1]) / (D_B * D_F)
+    t7_3 = (E_z[2] * E_z[1] * np.conj(E_z[0]) * e_t[0]) / (D_C * D_D)
+    t8_3 = (np.abs(E_z[1])**2 * E_z[2] * e_t[2]) / (D_C * D_E)
+    t9_3 = (np.abs(E_z[2])**2 * E_z[1] * e_t[1]) / (D_C * D_F)
+    rho_cb_3 = prefix_3 * (t1_3 + t2_3 + t3_3 + t4_3 + t5_3 + t6_3 + t7_3 + t8_3 + t9_3)
+    
+    # Cuarto Orden (rho_cc) - Población del Nivel Superior
+    prefix_4 = -(2 * np.abs(mu_ba)**2 * np.abs(mu_cb)**2) / (h_bar**4 * gamma_c)
+    b1 = (np.abs(E_z[0])**4) / (D_A * D_D)
+    b2 = (E_z[0]**2 * np.conj(E_z[1]) * np.conj(E_z[2])) * (1/(D_A * D_E) + 1/(D_A * D_F))
+    b3 = (np.conj(E_z[0])**2 * E_z[1] * E_z[2]) * (1/(D_B * D_D) + 1/(D_C * D_D))
+    b4 = (np.abs(E_z[1])**2 * np.abs(E_z[2])**2) * (1/(D_B * D_E) + 1/(D_B * D_F) + 1/(D_C * D_E) + 1/(D_C * D_F))
+    rho_cc_4 = prefix_4 * np.imag((1/D_pre_2) * (b1 + b2 + b3 + b4))
+    
+    shape_enforcer = np.ones_like(d3_array, dtype=np.complex128)
+    return rho_cb_3 * shape_enforcer, np.real(rho_cc_4 * shape_enforcer)
+
+# ==============================================================================
+# 3. CONFIGURACIÓN DE LOS 4 ESCENARIOS Y GRÁFICOS 2x2
+# ==============================================================================
+# Configuración estilística global
+plt.rcParams.update({
+    'font.family': 'sans-serif',
+    'font.size': 11,
+    'axes.labelsize': 12,
+    'axes.titlesize': 13,
+    'xtick.labelsize': 10,
+    'ytick.labelsize': 10
+})
+
+fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+plt.subplots_adjust(hspace=0.35, wspace=0.25)
+
+# Definición de Escenarios: (D1_factor, D2_factor, t_val, z_val, x_center, x_width, Título)
+scenarios = [
+    {
+        "params": (15.0, 0.0, 0.0, 0.0),
+        "grid": (0.0, 40.0),
+        "title": "Resonancia Estricta de Dos Fotones",
+        "desc": r"$\Delta_1 = 15\Gamma_{ba}$ | $\Delta_2 = 0$" + "\n" + r"$t=0$ | $z=0$"
+    },
+    {
+        "params": (20.0, 8.0, 0.0, 0.0),
+        "grid": (10.0, 40.0),
+        "title": r"Ruptura de Simetría ($\Delta_2 \neq 0$)",
+        "desc": r"$\Delta_1 = 20\Gamma_{ba}$ | $\Delta_2 = 8\Gamma_{ba}$" + "\n" + r"$t=0$ | $z=0$"
+    },
+    {
+        "params": (15.0, 0.0, 1.5e-15, 1.2e-6),
+        "grid": (0.0, 40.0),
+        "title": "Modulación Espacio y tiempo",
+        "desc": r"$\Delta_1 = 15\Gamma_{ba}$ | $\Delta_2 = 0$" + "\n" + r"$t=1.5\,\text{fs}$ | $z=1.2\,\mu\text{m}$"
+    },
+    {
+        "params": (40.0, 0.0, 0.0, 0.0),
+        "grid": (40.0, 60.0),
+        "title": "Bombeo Altamente Desintonizado",
+        "desc": r"$\Delta_1 = 40\Gamma_{ba}$ | $\Delta_2 = 0$" + "\n" + r"$t=0$ | $z=0$"
+    },
+]
+
+c_real = "#292327"       
+c_imag = "#B2C6D5"       
+c_pop  = "#292327"       
+
+for idx, sc in enumerate(scenarios):
+    row, col = divmod(idx, 2)
+    ax1 = axs[row, col]
+    
+    d1, d2, t, z = sc["params"]
+    x_center, x_width = sc["grid"]
+    x_arr = np.linspace(x_center - x_width/2, x_center + x_width/2, 2000)
+    
+    rho_cb, rho_cc = calc_density_matrix(d1, d2, x_arr, t, z)
+    
+    # ------------------------------------------------------------------
+    # EJE IZQUIERDO: Coherencia de Tercer Orden (FWM)
+    # ------------------------------------------------------------------
+    l1 = ax1.plot(x_arr, np.real(rho_cb), color=c_real, lw=2.5, label=r"$\text{Re}[\rho_{cb}^{(3)}]$")
+    l2 = ax1.plot(x_arr, np.imag(rho_cb), color=c_imag, lw=2.5, linestyle="--", label=r"$\text{Im}[\rho_{cb}^{(3)}]$")
+    
+    ax1.set_title(sc["title"], fontweight="bold", fontsize=14, pad=16)
+    ax1.set_xlabel(r"Desintonía normalizada ($\Delta_3 / \Gamma_{ba}$)", fontsize=14, labelpad=8)
+    ax1.set_ylabel(r"$\rho_{cb}^{(3)}$", color=c_real, fontweight="bold", fontsize=14)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+    ax1.tick_params(axis='y', labelcolor=c_real)
+    ax1.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    ax1.yaxis.get_offset_text().set_fontsize(12)
+    ax1.grid(True, linestyle=":", alpha=0.6)
+    
+    # ------------------------------------------------------------------
+    # EJE DERECHO: Población del Nivel Superior ( twinx )
+    # ------------------------------------------------------------------
+    ax2 = ax1.twinx()
+    # Se utiliza un estilo de línea diferente (-.) para distinguir la población de la parte real
+    l3 = ax2.plot(x_arr, rho_cc, color=c_pop, lw=2.0, linestyle="-.", alpha=0.85, label=r"$\rho_{cc}^{(4)}$")
+    
+    ax2.set_ylabel(r"$\rho_{cc}^{(4)}$", color=c_pop, fontweight="bold", fontsize=14)
+    ax2.tick_params(axis='y', which='major', labelsize=12, labelcolor=c_pop)
+    ax2.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    ax2.yaxis.get_offset_text().set_fontsize(12)
+    
+    # Incrustar caja de parámetros
+    ax1.text(0.04, 0.88, sc["desc"], 
+            transform=ax1.transAxes, 
+            fontsize=12, verticalalignment='top',
+            bbox=dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor=c_real, lw=1.5, alpha=0.95))
+    
+    # Unificar leyendas de ambos ejes en el primer panel
+    if idx == 0:
+        lines = l1 + l2 + l3
+        labels = [l.get_label() for l in lines]
+        ax1.legend(lines, labels, loc="upper right", frameon=True, facecolor="white", edgecolor="none", fontsize=12)
+
+plt.savefig("fixed_fwm_scenarios.png", format="png", dpi=300, bbox_inches="tight")
+
+print("¡Gráfico 2x2 generado exitosamente como 'fixed_fwm_scenarios.pdf' y '.png'!")
+plt.show()
