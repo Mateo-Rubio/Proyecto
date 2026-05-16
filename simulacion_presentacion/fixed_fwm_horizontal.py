@@ -83,7 +83,7 @@ def calc_density_matrix(D1_factor, D2_factor, d3_array, t, z):
     return rho_cb_3 * shape_enforcer, np.real(rho_cc_4 * shape_enforcer)
 
 # ==============================================================================
-# 3. CONFIGURACIÓN ESTILÍSTICA Y GRÁFICOS EN CUADRÍCULA (2x2)
+# 3. CONFIGURACIÓN ESTILÍSTICA Y GRÁFICOS HORIZONTALES (1x4)
 # ==============================================================================
 SCALE_FACTOR = 1.3  # Escala global para aumentar el tamaño de todos los elementos
 
@@ -102,31 +102,25 @@ plt.rcParams.update({
     'ytick.labelsize': base_ticks
 })
 
-# Disposición en matriz bidimensional (2 filas, 2 columnas)
-fig, axs = plt.subplots(2, 2, figsize=(16, 12), layout="constrained")
+# Disposición en una sola fila horizontal
+fig, axs = plt.subplots(1, 3, figsize=(17, 5), constrained_layout=True)
+plt.subplots_adjust(wspace=0.38)
 
-# Escenarios con descripciones depuradas centradas en Delta_2
+# Escenarios con descripciones simplificadas centradas en Delta_2
 scenarios = [
     {
         "d1": factor_Delta1, "d2": 0.0,
         "t": 0.0, "z": 0.0,
         "grid": (0.0, 40.0),
-        "title": "Resonancia Estricta de Dos Fotones",
+        "title": "Resonancia de Dos Fotones",
         "desc": r"$\Delta_2 = 0$"
-    },
-    {
-        "d1": factor_Delta1, "d2": 8.0,
-        "t": 0.0, "z": 0.0,
-        "grid": (10.0, 40.0),
-        "title": r"Ruptura de Simetría ($\Delta_2 \neq 0$)",
-        "desc": r"$\Delta_2 = 8\Gamma_{ba}$"
     },
     {
         "d1": factor_Delta1, "d2": 0.0,
         "t": 1.5e-15, "z": 1.2e-6,
         "grid": (0.0, 40.0),
         "title": "Modulación Espaciotemporal",
-        "desc": r"$\Delta_2 = 0$" + "\n" + r"$t=1.5\,\text{fs}$ | $z=1.2\,\mu\text{m}$"
+        "desc": r"$\Delta_2 = 0$" + "\n" + r"$t=1.5\,\text{fs}$" + "\n" + r"$z=1.2\,\mu\text{m}$"
     },
     {
         "d1": factor_Delta1 * 1.5, "d2": 0.0,
@@ -142,9 +136,7 @@ c_imag = "#B2C6D5"
 c_pop  = "#292327"       
 
 for idx, sc in enumerate(scenarios):
-    # Desempaquetado bidimensional para la matriz 2x2
-    row, col = divmod(idx, 2)
-    ax1 = axs[row, col]
+    ax1 = axs[idx]
     
     d1_val = sc["d1"]
     d2_val = sc["d2"]
@@ -179,17 +171,17 @@ for idx, sc in enumerate(scenarios):
     ax2.yaxis.get_offset_text().set_fontsize(base_ticks)
     
     # Caja descriptiva depurada
-    ax1.text(0.04, 0.88, sc["desc"], 
+    ax1.text(0.6, 0.88, sc["desc"], 
             transform=ax1.transAxes, 
             fontsize=base_box, verticalalignment='top',
             bbox=dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor=c_real, lw=1.5, alpha=0.95))
     
-    # Leyenda unificada únicamente en el primer panel para preservar la estética
+    # Leyenda unificada únicamente en el primer panel
     if idx == 0:
         lines = l1 + l2 + l3
         labels = [l.get_label() for l in lines]
-        ax1.legend(lines, labels, loc="upper right", frameon=True, facecolor="white", edgecolor="none", fontsize=base_legend)
+        ax1.legend(lines, labels, loc="upper left", frameon=True, facecolor="white", edgecolor="none", fontsize=base_legend)
 
-plt.savefig("fixed_fwm_scenarios_2x2.png", format="png", dpi=300, bbox_inches="tight")
-print("¡Gráfico en distribución 2x2 generado exitosamente!")
+plt.savefig("fixed_fwm_scenarios_horizontal.png", format="png", dpi=300, bbox_inches="tight")
+print("¡Gráfico horizontal generado exitosamente!")
 plt.show()
